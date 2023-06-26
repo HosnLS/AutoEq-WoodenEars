@@ -20,7 +20,7 @@ for data in datas:
             curve.append([float(x[0]), float(x[1][:-1])])
     curve = [["frequency", "raw"]] + curve
 
-    with open(f"measurements/woodenears/data/{product}-{name}.csv", "w") as f:
+    with open(f"measurements/woodenears/{product}-{name}.csv", "w") as f:
         for row in curve:
             f.write(",".join(map(str, row)) + "\n")
 

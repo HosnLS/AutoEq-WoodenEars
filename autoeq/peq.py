@@ -4,7 +4,7 @@ from time import time
 from abc import ABC, abstractmethod
 import numpy as np
 from matplotlib import pyplot as plt, ticker
-from scipy.optimize import fmin_slsqp
+from scipy.optimize import fmin_slsqp, differential_evolution
 from scipy.signal import find_peaks
 from tabulate import tabulate
 
@@ -613,8 +613,12 @@ class PEQ:
         # Above 10 kHz only the total energy matters so we'll take the average
         fr = self.fr.copy()
         target = self.target.copy()
-        target[self._10k_ix:] = np.mean(target[self._10k_ix:])
-        fr[self._10k_ix:] = np.mean(self.fr[self._10k_ix:])
+
+        target[self._20k_ix:] = np.mean(target[self._20k_ix:])
+        fr[self._20k_ix:] = np.mean(self.fr[self._20k_ix:])
+        #
+        # target[self._10k_ix:] = np.mean(target[self._10k_ix:])
+        # fr[self._10k_ix:] = np.mean(self.fr[self._10k_ix:])
         # target[:self._ix50] = np.mean(target[:self._ix50])  # TODO: Is this good?
         # fr[:self._ix50] = np.mean(fr[:self._ix50])
 
@@ -690,7 +694,7 @@ class PEQ:
                 bounds.append((filt.min_gain, filt.max_gain))
         return bounds
 
-    def _callback(self, params):
+    def _callback(self, params, **args):
         """Optimization callback function"""
         n = 8
         t = time() - self.history.start_time
@@ -747,15 +751,25 @@ class PEQ:
         self.history = OptimizationHistory()
         try:
             fmin_slsqp(  # Tested all of the scipy minimize methods, this is the best
-                self._optimizer_loss,
-                self._init_optimizer_params(),
+                func=self._optimizer_loss,
+                x0=self._init_optimizer_params(),
                 bounds=self._init_optimizer_bounds(),
                 callback=self._callback,
-                iprint=0)
+                iprint=1,
+                iter=1000
+                )
+            # differential_evolution(
+            #     func=self._optimizer_loss,
+            #     x0=self._init_optimizer_params(),
+            #     bounds=self._init_optimizer_bounds(),
+            #     callback=self._callback,
+            #     maxiter=100
+            # )
         except OptimizationFinished as err:
             # Restore best params
             self._parse_optimizer_params(
                 self.history.params[np.argmin(self.history.loss)])
+            print("\n", err)
 
     def plot(self, fig=None, ax=None):
         if fig is None:
